@@ -5,8 +5,17 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg?style=flat&logo=FastAPI&logoColor=white)](https://fastapi.tiangolo.com)
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB.svg?style=flat&logo=Python&logoColor=white)](https://www.python.org/)
 [![uv](https://img.shields.io/badge/Package_Manager-uv-DE5FE9.svg?style=flat)](https://docs.astral.sh/uv/)
+[![Deployed on Vercel](https://img.shields.io/badge/Deployed_on-Vercel-black.svg?style=flat&logo=Vercel&logoColor=white)](https://nasa-mission-data-api.vercel.app)
 [![NASA JPL](https://img.shields.io/badge/Data_Source-NASA%20%2F%20JPL-0B3D91.svg?style=flat&logo=NASA&logoColor=white)](https://ssd-api.jpl.nasa.gov/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+---
+
+### 🌐 Live Production Links
+* 🚀 **Live Production API:** [https://nasa-mission-data-api.vercel.app](https://nasa-mission-data-api.vercel.app)
+* 📖 **Interactive Swagger UI:** [https://nasa-mission-data-api.vercel.app/docs](https://nasa-mission-data-api.vercel.app/docs)
+* 📄 **OpenAPI Specification:** [https://nasa-mission-data-api.vercel.app/openapi.json](https://nasa-mission-data-api.vercel.app/openapi.json)
+* 🐙 **GitHub Repository:** [https://github.com/Mahbub0001/nasa-mission-data-api](https://github.com/Mahbub0001/nasa-mission-data-api)
 
 ---
 
