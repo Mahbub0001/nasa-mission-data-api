@@ -137,7 +137,7 @@ All endpoints return JSON and include CORS headers (`Access-Control-Allow-Origin
 | Endpoint | Method | Query Parameters | Description |
 | :--- | :---: | :--- | :--- |
 | `/asteroids/search` | `GET` | `limit` (default: 20, max: 100)<br>`offset` (default: 0)<br>`neo_only` (default: true) | Queries JPL SBDB Query API. Returns structured key-value objects for asteroids with SPK-ID, name, provisional designation, orbit class (`AMO`, `APO`, `ATE`, `IEO`), absolute magnitude ($H$), albedo, and rotation period. |
-| `/asteroids/{designation}` | `GET` | Path: `{designation}` (e.g. `433 Eros`, `Apophis`, `Bennu`) | Fetches full physical parameters ($GM$ gravity, triaxial dimensions, density) and complete Keplerian orbit elements ($a, e, i, \Omega, \omega, M$). Handles ambiguous queries with candidate lists (HTTP 300). |
+| `/asteroids/{designation}` | `GET` | Path: `{designation}` (e.g. `433 Eros`, `Apophis`, `Bennu`) | Fetches full physical parameters ($GM$ gravity, triaxial dimensions, density), complete Keplerian orbit elements ($a, e, i, \Omega, \omega, M$), discovery archives (`who`, `date`, `location`), target close-approach history (`ca_data`), and automatic size estimation (`estimated_diameter_km`). |
 
 ---
 
@@ -148,10 +148,11 @@ All endpoints return JSON and include CORS headers (`Access-Control-Allow-Origin
 
 ---
 
-### 5. Trajectory & Mission Design Screening
+### 5. Trajectory & Mission Design (JPL MDesign)
 | Endpoint | Method | Query Parameters | Description |
 | :--- | :---: | :--- | :--- |
-| `/mission-design/accessible` | `GET` | `year` (default: `2027,2028,2029,2030,2031`)<br>`lim` (default: 100, max: 500)<br>`sb-group` (`neo`, `pha`, or `all`)<br>`crit` (1 to 6) | Precomputed ballistic mission screening from JPL MDesign. Returns launch date (`date0`), arrival date (`datef`), Time of Flight (`tof` in days), characteristic launch energy ($C_3$), and total mission $\Delta V$ (`dv_tot` in km/s). |
+| `/mission-design/accessible` | `GET` | `year` (default: `2027,2028,2029,2030,2031`)<br>`lim` (default: 100, max: 500)<br>`sb-group` (`neo`, `pha`, or `all`)<br>`crit` (1 to 6) | Precomputed ballistic mission screening (Mode A). Returns launch date (`date0`), arrival date (`datef`), Time of Flight (`tof` in days), characteristic launch energy ($C_3$), and total mission $\Delta V$ (`dv_tot` in km/s). |
+| `/mission-design/porkchop` | `GET` | `designation` (default: `433`)<br>`mjd0` (start launch date MJD)<br>`span` (duration in days, default: 60)<br>`tof-min`, `tof-max` (flight time bounds)<br>`step` (grid step, default: 15) | On-demand Lambert grid search (Mode M) computing full Porkchop Plot transfer maps with 2D velocity grids (`vinf_dep_grid`, `vinf_arr_grid`) and optimal mission opportunity. |
 
 #### Ballistic Optimality Criteria (`crit` values):
 1. **`crit=1`**: Minimum departure $V_\infty$ (easiest Earth escape / launch vehicle sizing)
@@ -160,6 +161,14 @@ All endpoints return JSON and include CORS headers (`Access-Control-Allow-Origin
 4. **`crit=4`**: Minimum TOF + minimum departure $V_\infty$
 5. **`crit=5`**: Minimum TOF + minimum arrival $V_\infty$
 6. **`crit=6`**: Minimum TOF + minimum total $\Delta V$ (fastest arrival with low fuel)
+
+---
+
+### 6. Ephemeris & 3D State Vectors (JPL Horizons)
+| Endpoint | Method | Query Parameters | Description |
+| :--- | :---: | :--- | :--- |
+| `/ephemeris/vectors` | `GET` | `target` (body ID or name, e.g. `433`, `399`, `499`)<br>`start_date`, `stop_date` (YYYY-MM-DD)<br>`step_size` (e.g. `1 d`, `6 h`)<br>`center` (default: `@sun`, or `@399`) | High-precision 3D Cartesian coordinates ($X, Y, Z$ in km) and velocity components ($V_x, V_y, V_z$ in km/s) computed by JPL Horizons with relativistic n-body dynamics. |
+| `/ephemeris/spacecraft/{mission_name}` | `GET` | Path: `{mission_name}` (`near-shoemaker`, `osiris-rex`, `dart`, `voyager-1`, `voyager-2`)<br>`start_date`, `stop_date`<br>`step_size` | Official historical 3D flight trajectory vectors for celebrated NASA spacecraft missions. |
 
 ---
 

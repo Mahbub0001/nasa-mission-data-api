@@ -67,7 +67,7 @@ def run_tests() -> None:
         data = r.json()
         assert r.status_code == 200
         assert "documentation" in data
-        assert len(data.get("endpoints", [])) >= 9
+        assert len(data.get("endpoints", [])) >= 10
         log_result("GET /", True, f"({r.status_code} OK) - Endpoints: {len(data['endpoints'])}")
     except Exception as e:
         log_result("GET /", False, str(e))
@@ -87,7 +87,7 @@ def run_tests() -> None:
         data = r.json()
         assert r.status_code == 200
         assert data.get("openapi", "").startswith("3.")
-        assert "/asteroids/search" in data.get("paths", {})
+        assert "/ephemeris/vectors" in data.get("paths", {})
         log_result("GET /openapi.json", True, f"({r.status_code} OK) - OpenAPI {data.get('openapi')} Valid")
     except Exception as e:
         log_result("GET /openapi.json", False, str(e))
@@ -97,9 +97,9 @@ def run_tests() -> None:
         r = requests.get(f"{BASE_URL}/sources", timeout=5)
         data = r.json()
         assert r.status_code == 200
-        assert len(data.get("sources", [])) == 6
+        assert len(data.get("sources", [])) >= 7
         assert "data_policy" in data
-        log_result("GET /sources", True, f"({r.status_code} OK) - {len(data['sources'])} sources documented")
+        log_result("GET /sources", True, f"({r.status_code} OK) - {len(data['sources'])} sources documented (including Horizons)")
     except Exception as e:
         log_result("GET /sources", False, str(e))
 
@@ -149,7 +149,7 @@ def run_tests() -> None:
         log_result("GET /missions/near/sections", False, str(e))
 
     # -------------------------------------------------------------
-    # 3. Asteroid Queries (JPL SBDB & SBDB Query)
+    # 3. Asteroids Search & Physical Parameters
     # -------------------------------------------------------------
     print("\n[Group 3] Asteroids Search & Physical Parameters")
     
@@ -193,7 +193,7 @@ def run_tests() -> None:
     except Exception as e:
         log_result("GET /asteroids/search (neo_only=false)", False, str(e))
 
-    # Asteroid Details: 433 Eros
+    # Asteroid Details: 433 Eros (with Discovery and CA data verification)
     try:
         t0 = time.time()
         r = requests.get(f"{BASE_URL}/asteroids/433%20Eros", timeout=15)
@@ -204,7 +204,14 @@ def run_tests() -> None:
         fullname = obj.get("fullname", "")
         spkid = obj.get("spkid")
         assert "433 Eros" in fullname
-        log_result("GET /asteroids/433 Eros", True, f"({r.status_code} OK, {dt}ms) - Object: {fullname}, SPK-ID: {spkid}")
+        # Check discovery metadata
+        discovery = data.get("discovery")
+        assert discovery is not None
+        assert "Witt" in discovery.get("who", "")
+        # Check close approach count
+        ca_count = data.get("close_approach_encounters_count", 0)
+        assert ca_count >= 10
+        log_result("GET /asteroids/433 Eros", True, f"({r.status_code} OK, {dt}ms) - {fullname}, Discoverer: {discovery.get('who')}, CA Encounters: {ca_count}")
     except Exception as e:
         log_result("GET /asteroids/433 Eros", False, str(e))
 
@@ -293,9 +300,9 @@ def run_tests() -> None:
         log_result("GET /close-approaches?date-min=invalid", False, str(e))
 
     # -------------------------------------------------------------
-    # 5. Mission Design Screening (JPL MDesign)
+    # 5. Mission Design Screening & Porkchop Transfer Maps
     # -------------------------------------------------------------
-    print("\n[Group 5] Ballistic Mission Design Trajectories")
+    print("\n[Group 5] Ballistic Mission Design & Porkchop Plots")
     
     # Accessible Targets: Criterion 1 (Min Departure V-infinity)
     try:
@@ -334,6 +341,66 @@ def run_tests() -> None:
     except Exception as e:
         log_result("GET /mission-design/accessible?crit=9", False, str(e))
 
+    # On-Demand Porkchop Plot (Mode M Lambert Grid Search)
+    try:
+        t0 = time.time()
+        r = requests.get(f"{BASE_URL}/mission-design/porkchop?designation=433&mjd0=61500&span=60&tof-min=200&tof-max=400&step=15", timeout=25)
+        dt = round((time.time() - t0) * 1000, 1)
+        data = r.json()
+        assert r.status_code == 200
+        assert data.get("evaluated_missions_count") >= 1
+        best = data.get("best_mission", {})
+        assert "dv_tot_kms" in best
+        assert len(data.get("departure_dates_mjd", [])) >= 2
+        assert len(data.get("flight_times_days", [])) >= 2
+        log_result("GET /mission-design/porkchop", True, f"({r.status_code} OK, {dt}ms) - {data['evaluated_missions_count']} trajectories evaluated. Best DV: {best.get('dv_tot_kms')} km/s (TOF: {best.get('tof')}d)")
+    except Exception as e:
+        log_result("GET /mission-design/porkchop", False, str(e))
+
+    # -------------------------------------------------------------
+    # 6. Ephemeris & 3D Vectors (JPL Horizons)
+    # -------------------------------------------------------------
+    print("\n[Group 6] Ephemeris & 3D State Vectors (JPL Horizons)")
+    
+    # 3D Cartesian Vectors: 433 Eros
+    try:
+        t0 = time.time()
+        r = requests.get(f"{BASE_URL}/ephemeris/vectors?target=433&start_date=2026-10-29&stop_date=2026-11-01&step_size=1%20d", timeout=15)
+        dt = round((time.time() - t0) * 1000, 1)
+        data = r.json()
+        assert r.status_code == 200
+        assert data.get("vectors_count") >= 2
+        vec = data.get("vectors", [])[0]
+        assert "position_km" in vec
+        assert "velocity_kms" in vec
+        pos = vec["position_km"]
+        vel = vec["velocity_kms"]
+        log_result("GET /ephemeris/vectors (433 Eros)", True, f"({r.status_code} OK, {dt}ms) - {data['vectors_count']} vectors. Pos: [{pos['x']:.0f}, {pos['y']:.0f}, {pos['z']:.0f}] km, Range: {vec.get('range_au')} au")
+    except Exception as e:
+        log_result("GET /ephemeris/vectors (433 Eros)", False, str(e))
+
+    # Spacecraft Historical Ephemeris: NEAR Shoemaker (-93)
+    try:
+        t0 = time.time()
+        r = requests.get(f"{BASE_URL}/ephemeris/spacecraft/near-shoemaker?start_date=2000-02-14&stop_date=2000-02-17&step_size=1%20d", timeout=15)
+        dt = round((time.time() - t0) * 1000, 1)
+        data = r.json()
+        assert r.status_code == 200
+        assert data.get("vectors_count") >= 2
+        svec = data.get("vectors", [])[0]
+        assert "position_km" in svec
+        log_result("GET /ephemeris/spacecraft/near-shoemaker", True, f"({r.status_code} OK, {dt}ms) - {data.get('mission_name')}: {data['vectors_count']} vectors retrieved")
+    except Exception as e:
+        log_result("GET /ephemeris/spacecraft/near-shoemaker", False, str(e))
+
+    # Spacecraft Ephemeris 404 (Unknown spacecraft)
+    try:
+        r = requests.get(f"{BASE_URL}/ephemeris/spacecraft/unknown_craft_xyz", timeout=10)
+        assert r.status_code == 404
+        log_result("GET /ephemeris/spacecraft/unknown", True, f"({r.status_code} Not Found) - Validated supported spacecraft list")
+    except Exception as e:
+        log_result("GET /ephemeris/spacecraft/unknown", False, str(e))
+
     # -------------------------------------------------------------
     # Summary
     # -------------------------------------------------------------
@@ -354,7 +421,6 @@ def start_server_and_test() -> None:
     server_thread = threading.Thread(target=server.run, daemon=True)
     server_thread.start()
 
-    # Wait for server ready
     ready = False
     for _ in range(30):
         try:
