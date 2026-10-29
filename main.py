@@ -342,7 +342,7 @@ def root() -> dict[str, Any]:
     }
 
 
-@app.get("/health", tags=["Overview"])
+@app.head("/health", tags=["Overview"])
 def health() -> dict[str, str]:
     return {
         "status": "ok",
